@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video to GIF Converter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,8 +15,8 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Space Grotesk', 'Arial Black', sans-serif;
+            background: #FDE047;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -23,25 +26,53 @@
         
         .container {
             background: white;
-            border-radius: 20px;
+            border: 5px solid black;
+            box-shadow: 8px 8px 0 black;
             padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 600px;
             width: 100%;
+            position: relative;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            width: 30px;
+            height: 30px;
+            background: #F97316;
+            border: 4px solid black;
+            border-radius: 50%;
+        }
+        
+        .container::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: -10px;
+            width: 40px;
+            height: 40px;
+            background: #A78BFA;
+            border: 4px solid black;
         }
         
         h1 {
-            color: #333;
+            color: black;
             margin-bottom: 10px;
-            font-size: 28px;
+            font-size: 36px;
             text-align: center;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -1px;
         }
         
         .subtitle {
-            color: #666;
+            color: black;
             text-align: center;
             margin-bottom: 30px;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 700;
         }
         
         .form-group {
@@ -51,32 +82,36 @@
         label {
             display: block;
             margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
+            color: black;
+            font-weight: 900;
             font-size: 14px;
+            text-transform: uppercase;
         }
         
         input[type="text"],
         input[type="number"] {
             width: 100%;
             padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            border: 3px solid black;
+            background: white;
             font-size: 15px;
-            transition: all 0.3s;
+            font-weight: 700;
+            transition: all 0.2s;
         }
         
         input[type="text"]:focus,
         input[type="number"]:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: #FDE047;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 black;
         }
         
         .hint {
             font-size: 12px;
-            color: #999;
+            color: black;
             margin-top: 5px;
+            font-weight: 600;
         }
         
         .duration-control {
@@ -87,9 +122,9 @@
         
         .duration-control input[type="range"] {
             flex: 1;
-            height: 8px;
-            border-radius: 5px;
-            background: #e0e0e0;
+            height: 12px;
+            background: white;
+            border: 3px solid black;
             outline: none;
             -webkit-appearance: none;
             appearance: none;
@@ -98,27 +133,28 @@
         .duration-control input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #667eea;
+            width: 24px;
+            height: 24px;
+            background: #10B981;
+            border: 3px solid black;
             cursor: pointer;
+            box-shadow: 2px 2px 0 black;
         }
         
         .duration-control input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #667eea;
+            width: 24px;
+            height: 24px;
+            background: #10B981;
+            border: 3px solid black;
             cursor: pointer;
-            border: none;
+            box-shadow: 2px 2px 0 black;
         }
         
         .duration-value {
             min-width: 60px;
-            font-weight: 600;
-            color: #667eea;
-            font-size: 16px;
+            font-weight: 900;
+            color: black;
+            font-size: 18px;
         }
         
         .checkbox-group {
@@ -126,28 +162,31 @@
             align-items: center;
             gap: 10px;
             padding: 12px;
-            background: #f5f5f5;
-            border-radius: 10px;
+            background: #A78BFA;
+            border: 3px solid black;
             cursor: pointer;
         }
         
         .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
+            border: 3px solid black;
         }
         
         .checkbox-label {
             flex: 1;
             cursor: pointer;
-            color: #555;
+            color: black;
             font-size: 14px;
+            font-weight: 700;
         }
         
         .checkbox-description {
             font-size: 11px;
-            color: #999;
+            color: black;
             margin-top: 2px;
+            font-weight: 600;
         }
         
         .conditional-group {
@@ -164,30 +203,33 @@
         
         button {
             width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 16px;
+            background: #10B981;
+            color: black;
+            border: 4px solid black;
+            font-size: 18px;
+            font-weight: 900;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            box-shadow: 4px 4px 0 black;
         }
         
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 black;
         }
         
         button:active {
-            transform: translateY(0);
+            transform: translate(0, 0);
+            box-shadow: 2px 2px 0 black;
         }
         
         button:disabled {
-            background: #ccc;
+            background: #D1D5DB;
             cursor: not-allowed;
             transform: none;
+            box-shadow: 4px 4px 0 black;
         }
         
         .progress-container {
@@ -197,76 +239,80 @@
         
         .progress-bar {
             width: 100%;
-            height: 35px;
-            background: #f0f0f0;
-            border-radius: 17px;
+            height: 40px;
+            background: white;
+            border: 4px solid black;
             overflow: hidden;
             position: relative;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background: #F97316;
             width: 0%;
             transition: width 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 700;
-            font-size: 14px;
+            color: black;
+            font-weight: 900;
+            font-size: 16px;
             position: relative;
-            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            border-right: 4px solid black;
         }
         
         .progress-status {
             text-align: center;
             margin-top: 12px;
-            color: #555;
-            font-size: 14px;
-            font-weight: 500;
+            color: black;
+            font-size: 16px;
+            font-weight: 900;
         }
         
         .progress-details {
             display: flex;
             justify-content: space-between;
             margin-top: 8px;
-            font-size: 12px;
-            color: #888;
+            font-size: 13px;
+            color: black;
         }
         
         .download-info {
-            font-weight: 600;
-            color: #667eea;
+            font-weight: 900;
+            color: black;
         }
         
         .status {
             margin-top: 20px;
             padding: 15px;
-            border-radius: 10px;
+            border: 4px solid black;
             text-align: center;
-            font-weight: 500;
+            font-weight: 900;
             display: none;
         }
         
         .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #10B981;
+            color: black;
+            box-shadow: 4px 4px 0 black;
         }
         
         .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #EF4444;
+            color: white;
+            box-shadow: 4px 4px 0 black;
             white-space: pre-line;
         }
         
         .download-btn {
             margin-top: 15px;
-            background: #28a745;
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: #3B82F6;
+            border: 4px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+        
+        .download-btn:hover {
+            background: #2563EB;
         }
         
         .lang-switch {
@@ -275,19 +321,28 @@
         }
         
         .lang-btn {
-            background: none;
-            border: none;
-            color: #667eea;
+            background: #FDE047;
+            border: 3px solid black;
+            color: black;
             cursor: pointer;
             font-size: 14px;
-            padding: 5px 10px;
+            font-weight: 700;
+            padding: 8px 16px;
             margin: 0 5px;
             width: auto;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        
+        .lang-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 3px 3px 0 black;
         }
         
         .lang-btn.active {
-            font-weight: bold;
-            text-decoration: underline;
+            background: #A78BFA;
+            font-weight: 900;
+            box-shadow: 3px 3px 0 black;
         }
     </style>
 </head>
