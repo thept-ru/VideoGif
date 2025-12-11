@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to GIF Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .duration-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .duration-control input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        .duration-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .duration-control input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .duration-value {
+            min-width: 60px;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 16px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checkbox-label {
+            flex: 1;
+            cursor: pointer;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        .checkbox-description {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+        }
+        
+        .conditional-group {
+            display: none;
+            opacity: 0.5;
+            margin-top: -15px;
+            margin-bottom: 10px;
+        }
+        
+        .conditional-group.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 35px;
+            background: #f0f0f0;
+            border-radius: 17px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+        }
+        
+        .progress-status {
+            text-align: center;
+            margin-top: 12px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .progress-details {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .download-info {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            white-space: pre-line;
+        }
+        
+        .download-btn {
+            margin-top: 15px;
+            background: #28a745;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .lang-switch {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .lang-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 10px;
+            margin: 0 5px;
+            width: auto;
+        }
+        
+        .lang-btn.active {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-switch">
+            <button class="lang-btn active" onclick="setLanguage('ru')">Русский</button>
+            |
+            <button class="lang-btn" onclick="setLanguage('en')">English</button>
+        </div>
+        
+        <h1 data-ru="Конвертер Видео в GIF" data-en="Video to GIF Converter">Конвертер Видео в GIF</h1>
+        <p class="subtitle" data-ru="Создайте GIF-анимацию из любого видео" data-en="Create a GIF from any video">Создайте GIF-анимацию из любого видео</p>
+        
+        <form id="convertForm">
+            <div class="form-group">
+                <label data-ru="Ссылка на видео:" data-en="Video URL:">Ссылка на видео:</label>
+                <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+                <div class="hint" data-ru="Поддерживается YouTube и прямые ссылки на видео" data-en="Supports YouTube and direct video links">Поддерживается YouTube и прямые ссылки на видео</div>
+            </div>
+            
+            <div class="form-group">
+                <label data-ru="Начальный тайминг (секунды):" data-en="Start time (seconds):">Начальный тайминг (секунды):</label>
+                <input type="number" id="startTime" value="10" min="0" step="1" required>
+                <div class="hint" data-ru="С какой секунды начать создание GIF" data-en="From which second to start GIF creation">С какой секунды начать создание GIF</div>
+            </div>
+            
+            <div class="form-group">
+                <label id="durationLabel" data-ru="Длительность GIF:" data-en="GIF Duration:">Длительность GIF:</label>
+                <div class="duration-control">
+                    <input type="range" id="durationRange" min="1" max="10" value="3" step="1">
+                    <span class="duration-value"><span id="durationValue">3</span> <span id="durationUnit" data-ru="сек" data-en="sec">сек</span></span>
+                </div>
+                <div class="hint" id="durationHint" data-ru="От 1 до 10 секунд (по умолчанию 3)" data-en="From 1 to 10 seconds (default 3)">От 1 до 10 секунд (по умолчанию 3)</div>
+            </div>
+            
+            <button type="submit" id="submitBtn" data-ru="Создать GIF" data-en="Create GIF">Создать GIF</button>
+        </form>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="progress-status" id="progressStatus">Обработка...</div>
+            <div class="progress-details">
+                <span id="progressPhase">Инициализация</span>
+                <span class="download-info" id="downloadPercent">-</span>
+            </div>
+        </div>
+        
+        <div class="status" id="status"></div>
+    </div>
+    
+    <script>
+        let currentLang = 'ru';
+        let currentGifId = null;
+        let progressInterval = null;
+        
+        const durationRange = document.getElementById('durationRange');
+        const durationValue = document.getElementById('durationValue');
+        
+        durationRange.addEventListener('input', (e) => {
+            durationValue.textContent = e.target.value;
+        });
+        
+        function setLanguage(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[data-ru]').forEach(el => {
+                if (el.tagName === 'INPUT') {
+                    el.placeholder = el.getAttribute('data-' + lang);
+                } else {
+                    el.textContent = el.getAttribute('data-' + lang);
+                }
+            });
+            
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+        
+        function updateProgress(taskId) {
+            fetch(`/progress/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const progressFill = document.getElementById('progressFill');
+                    const progressStatus = document.getElementById('progressStatus');
+                    const progressPhase = document.getElementById('progressPhase');
+                    const downloadPercent = document.getElementById('downloadPercent');
+                    
+                    progressFill.style.width = data.progress + '%';
+                    progressFill.textContent = Math.round(data.progress) + '%';
+                    progressStatus.textContent = data.status;
+                    
+                    if (data.progress < 60) {
+                        progressPhase.textContent = currentLang === 'ru' ? 'Фаза: Скачивание' : 'Phase: Download';
+                        if (data.download_percent) {
+                            downloadPercent.textContent = `${currentLang === 'ru' ? 'Загружено' : 'Downloaded'}: ${data.download_percent}%`;
+                        }
+                    } else if (data.progress < 90) {
+                        progressPhase.textContent = currentLang === 'ru' ? 'Фаза: Обработка' : 'Phase: Processing';
+                        downloadPercent.textContent = currentLang === 'ru' ? 'Обработка видео...' : 'Processing video...';
+                    } else {
+                        progressPhase.textContent = currentLang === 'ru' ? 'Фаза: Завершение' : 'Phase: Finalizing';
+                        downloadPercent.textContent = currentLang === 'ru' ? 'Почти готово!' : 'Almost done!';
+                    }
+                    
+                    if (data.progress >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                })
+                .catch(err => console.error('Ошибка:', err));
+        }
+        
+        document.getElementById('convertForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const videoUrl = document.getElementById('videoUrl').value;
+            const startTime = document.getElementById('startTime').value;
+            const duration = document.getElementById('durationRange').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const status = document.getElementById('status');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            
+            submitBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            status.style.display = 'none';
+            progressFill.style.width = '0%';
+            progressFill.textContent = '0%';
+            
+            if (currentGifId) {
+                await fetch(`/cleanup/${currentGifId}`, { method: 'POST' });
+                currentGifId = null;
+            }
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        video_url: videoUrl,
+                        start_time: startTime,
+                        duration: duration
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentGifId = data.gif_id;
+                    progressInterval = setInterval(() => updateProgress(currentGifId), 300);
+                    
+                    setTimeout(() => {
+                        clearInterval(progressInterval);
+                        progressContainer.style.display = 'none';
+                        status.style.display = 'block';
+                        status.className = 'status success';
+                        status.innerHTML = `${data.message}<br><a href="/download/${data.gif_id}" download><button class="download-btn">${currentLang === 'ru' ? 'Скачать GIF' : 'Download GIF'}</button></a>`;
+                        submitBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    progressContainer.style.display = 'none';
+                    status.style.display = 'block';
+                    status.className = 'status error';
+                    status.textContent = currentLang === 'ru' ? `Ошибка: ${data.error}` : `Error: ${data.error}`;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                clearInterval(progressInterval);
+                progressContainer.style.display = 'none';
+                status.style.display = 'block';
+                status.className = 'status error';
+                status.textContent = currentLang === 'ru' ? `Ошибка: ${error.message}` : `Error: ${error.message}`;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
