@@ -439,7 +439,7 @@
                 
                 if (data.success) {
                     currentGifId = data.gif_id;
-                    progressInterval = setInterval(() => updateProgress(currentGifId), 300);
+                    progressInterval = setInterval(() => updateProgress(currentGifId), 150);
                     
                     setTimeout(() => {
                         clearInterval(progressInterval);

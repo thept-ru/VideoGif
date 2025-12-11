@@ -5,6 +5,8 @@ import yt_dlp
 import uuid
 from pathlib import Path
 import re
+import threading
+import time
 
 app = Flask(__name__)
 
@@ -12,6 +14,16 @@ TEMP_DIR = Path("temp")
 TEMP_DIR.mkdir(exist_ok=True)
 
 progress_store = {}
+lock = threading.Lock()
+
+def update_progress(task_id, progress, status, download_percent=None):
+    """Thread-safe progress update"""
+    with lock:
+        if task_id in progress_store:
+            progress_store[task_id]['progress'] = progress
+            progress_store[task_id]['status'] = status
+            if download_percent is not None:
+                progress_store[task_id]['download_percent'] = download_percent
 
 def is_direct_video_url(url):
     """Проверка, является ли URL прямой ссылкой на видео файл"""
@@ -28,6 +40,7 @@ def progress_hook(d, task_id):
         else:
             download_progress = 50
         
+        # Overall progress: 0-60% for download phase
         overall_progress = min(download_progress * 0.6, 60)
         
         if download_progress < 20:
@@ -43,17 +56,9 @@ def progress_hook(d, task_id):
         else:
             status = 'Скачивание: завершение...'
         
-        progress_store[task_id] = {
-            'progress': overall_progress,
-            'status': status,
-            'download_percent': round(download_progress, 1)
-        }
+        update_progress(task_id, overall_progress, status, round(download_progress, 1))
     elif d['status'] == 'finished':
-        progress_store[task_id] = {
-            'progress': 60,
-            'status': 'Скачивание завершено (100%)',
-            'download_percent': 100
-        }
+        update_progress(task_id, 60, 'Скачивание завершено (100%)', 100)
 
 @app.route('/')
 def index():
@@ -98,7 +103,7 @@ def convert_video():
                 '-y'
             ]
             
-            progress_store[unique_id] = {'progress': 20, 'status': 'Скачивание: 20% завершено', 'download_percent': 30}
+            update_progress(unique_id, 20, 'Скачивание: 20% завершено', 30)
             result = subprocess.run(download_cmd, capture_output=True, text=True)
             
             if result.returncode != 0:
@@ -106,7 +111,7 @@ def convert_video():
                 del progress_store[unique_id]
                 return jsonify({'error': 'Не удалось скачать видео'}), 500
             
-            progress_store[unique_id] = {'progress': 60, 'status': 'Скачивание завершено (100%)', 'download_percent': 100}
+            update_progress(unique_id, 60, 'Скачивание завершено (100%)', 100)
         else:
             video_path_template = TEMP_DIR / f"{unique_id}.%(ext)s"
             
@@ -174,11 +179,40 @@ def convert_video():
             '-y'
         ]
         
-        progress_store[unique_id] = {'progress': 80, 'status': 'Конвертация в GIF...', 'download_percent': 100}
-        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        update_progress(unique_id, 80, 'Конвертация в GIF...', 100)
         
-        if result.returncode != 0:
-            print(f"Ошибка: {result.stderr}")
+        # Run FFmpeg with progress monitoring
+        try:
+            process = subprocess.Popen(
+                ffmpeg_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1
+            )
+            
+            # Monitor FFmpeg output for progress
+            import re as regex_module
+            frame_pattern = regex_module.compile(r'frame=\s*(\d+)')
+            duration_ms = duration * 1000  # Expected duration in milliseconds
+            
+            for line in process.stderr:
+                frame_match = frame_pattern.search(line)
+                if frame_match:
+                    frame_num = int(frame_match.group(1))
+                    # FFmpeg outputs at 15 fps, estimate progress
+                    estimated_progress = min(90, 80 + (frame_num / (duration * 15)) * 10)
+                    update_progress(unique_id, estimated_progress, 'Конвертация в GIF...', 100)
+            
+            process.wait()
+            result_returncode = process.returncode
+        except Exception as e:
+            print(f"Ошибка при запуске FFmpeg: {e}")
+            del progress_store[unique_id]
+            return jsonify({'error': f'Ошибка создания GIF'}), 500
+        
+        if result_returncode != 0:
+            print(f"Ошибка FFmpeg")
             del progress_store[unique_id]
             return jsonify({'error': f'Ошибка создания GIF'}), 500
         
