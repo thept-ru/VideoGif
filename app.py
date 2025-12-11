@@ -139,10 +139,14 @@ def process_video_task(unique_id, video_url, start_time, duration):
         else:
             video_path_template = TEMP_DIR / f"{unique_id}.%(ext)s"
             
-            postprocessors = [
-                {'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'},
-                {'key': 'Exec', 'exec_cmd': f'ffmpeg -ss {max(0, start_time - 2)} -to {start_time - 2 + duration + 4} -i "%(filepath)s" -c copy -y "%(filepath)s.trimmed.mp4" && mv "%(filepath)s.trimmed.mp4" "%(filepath)s"'}
-            ]
+            # Calculate download range with buffer
+            buffer_before = max(0, start_time - 2)
+            buffer_after = duration + 4
+            download_start = buffer_before
+            download_end = buffer_before + buffer_after
+            
+            # Use download_ranges to download only needed segment
+            from yt_dlp.utils import download_range_func
             
             ydl_opts = {
                 'format': 'best[ext=mp4]/best',
@@ -157,7 +161,8 @@ def process_video_task(unique_id, video_url, start_time, duration):
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
                 },
-                'postprocessors': postprocessors,
+                'download_ranges': download_range_func(None, [(download_start, download_end)]),
+                'force_keyframes_at_cuts': True,
             }
             
             progress_store[unique_id] = {'progress': 2, 'status': 'Подключение к серверу...', 'download_percent': 0}
@@ -184,14 +189,14 @@ def process_video_task(unique_id, video_url, start_time, duration):
         
         print(f"Используется видео: {video_path}")
         
-        progress_store[unique_id] = {'progress': 70, 'status': 'Обработка видео...', 'download_percent': 100}
+        update_progress(unique_id, 70, 'Обработка видео...', 100)
         
-        # Calculate the seek position within the trimmed video
-        # The video was trimmed starting at (start_time - 2), so we need to seek 2 seconds into it
+        # Calculate the seek position within the downloaded segment
+        # The video segment starts at (start_time - 2), so we need to seek to the offset within it
         buffer_before = max(0, start_time - 2)
-        gif_seek_time = start_time - buffer_before  # This gives us the offset within the trimmed video
+        gif_seek_time = start_time - buffer_before  # Offset from segment start (typically 2 seconds)
         
-        # GIF creation
+        # GIF creation from downloaded segment
         ffmpeg_cmd = [
             'ffmpeg',
             '-ss', str(gif_seek_time),
