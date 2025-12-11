@@ -316,42 +316,47 @@
         }
         
         .lang-switch {
-            text-align: center;
-            margin-bottom: 20px;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
         }
         
         .lang-btn {
-            background: #FDE047;
-            border: 3px solid black;
+            background: transparent;
+            border: 2px solid black;
             color: black;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 700;
-            padding: 8px 16px;
-            margin: 0 5px;
+            padding: 4px 8px;
+            margin: 0;
             width: auto;
             text-transform: uppercase;
             transition: all 0.2s;
+            opacity: 0.5;
         }
         
         .lang-btn:hover {
-            transform: translate(-2px, -2px);
-            box-shadow: 3px 3px 0 black;
+            opacity: 1;
+            transform: none;
+            box-shadow: none;
         }
         
         .lang-btn.active {
-            background: #A78BFA;
-            font-weight: 900;
-            box-shadow: 3px 3px 0 black;
+            background: black;
+            color: white;
+            opacity: 1;
+            box-shadow: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="lang-switch">
-            <button class="lang-btn active" onclick="setLanguage('ru')">Русский</button>
-            |
-            <button class="lang-btn" onclick="setLanguage('en')">English</button>
+            <button class="lang-btn active" onclick="setLanguage('ru')">RU</button>
+            <button class="lang-btn" onclick="setLanguage('en')">EN</button>
         </div>
         
         <h1 data-ru="Конвертер Видео в GIF" data-en="Video to GIF Converter">Конвертер Видео в GIF</h1>
