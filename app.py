@@ -66,7 +66,7 @@ def index():
 
 @app.route('/convert', methods=['POST'])
 def convert_video():
-    unique_id = None
+    """Start video conversion in background and return task ID immediately"""
     try:
         data = request.json
         video_url = data.get('video_url')
@@ -82,10 +82,34 @@ def convert_video():
             return jsonify({'error': 'URL видео не указан'}), 400
         
         unique_id = str(uuid.uuid4())
+        
+        # Initialize progress
+        progress_store[unique_id] = {'progress': 0, 'status': 'Подготовка...', 'download_percent': 0}
+        
+        # Start processing in background thread
+        thread = threading.Thread(
+            target=process_video_task,
+            args=(unique_id, video_url, start_time, duration)
+        )
+        thread.daemon = True
+        thread.start()
+        
+        # Return task ID immediately
+        return jsonify({
+            'success': True,
+            'gif_id': unique_id,
+            'message': 'Обработка началась'
+        })
+        
+    except Exception as e:
+        print(f"Ошибка: {str(e)}")
+        return jsonify({'error': f'Ошибка: {str(e)}'}), 500
+
+def process_video_task(unique_id, video_url, start_time, duration):
+    """Background task for video processing"""
+    try:
         video_path = TEMP_DIR / f"{unique_id}.mp4"
         gif_path = TEMP_DIR / f"{unique_id}.gif"
-        
-        progress_store[unique_id] = {'progress': 0, 'status': 'Подготовка...', 'download_percent': 0}
         
         if is_direct_video_url(video_url):
             print(f"Прямая ссылка на видео обнаружена: {video_url}")
@@ -109,7 +133,7 @@ def convert_video():
             if result.returncode != 0:
                 print(f"Ошибка скачивания: {result.stderr}")
                 del progress_store[unique_id]
-                return jsonify({'error': 'Не удалось скачать видео'}), 500
+                return
             
             update_progress(unique_id, 60, 'Скачивание завершено (100%)', 100)
         else:
@@ -147,14 +171,14 @@ def convert_video():
                 error_msg = str(dl_error)
                 print(f"Ошибка: {error_msg}")
                 del progress_store[unique_id]
-                return jsonify({'error': f'Не удалось скачать видео: {error_msg}'}), 500
+                return
             
             possible_files = list(TEMP_DIR.glob(f"{unique_id}.*"))
             video_files = [f for f in possible_files if f.suffix.lower() in ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.flv']]
             
             if not video_files:
                 del progress_store[unique_id]
-                return jsonify({'error': 'Файл не найден'}), 500
+                return
             
             video_path = video_files[0]
         
@@ -209,29 +233,27 @@ def convert_video():
         except Exception as e:
             print(f"Ошибка при запуске FFmpeg: {e}")
             del progress_store[unique_id]
-            return jsonify({'error': f'Ошибка создания GIF'}), 500
+            return
         
         if result_returncode != 0:
             print(f"Ошибка FFmpeg")
             del progress_store[unique_id]
-            return jsonify({'error': f'Ошибка создания GIF'}), 500
+            return
         
-        progress_store[unique_id] = {'progress': 95, 'status': 'Финализация...', 'download_percent': 100}
+        update_progress(unique_id, 95, 'Финализация...', 100)
         video_path.unlink(missing_ok=True)
         
-        progress_store[unique_id] = {'progress': 100, 'status': 'Готово! GIF создан', 'download_percent': 100}
-        
-        return jsonify({
-            'success': True,
-            'gif_id': unique_id,
-            'message': 'GIF успешно создан!'
-        })
+        update_progress(unique_id, 100, 'Готово! GIF создан', 100)
         
     except Exception as e:
-        print(f"Ошибка: {str(e)}")
-        if unique_id and unique_id in progress_store:
-            del progress_store[unique_id]
-        return jsonify({'error': f'Ошибка: {str(e)}'}), 500
+        print(f"Ошибка в фоновой задаче: {str(e)}")
+        if unique_id in progress_store:
+            progress_store[unique_id] = {
+                'progress': 0,
+                'status': f'Ошибка: {str(e)}',
+                'download_percent': 0,
+                'error': True
+            }
 
 @app.route('/progress/<task_id>')
 def get_progress(task_id):

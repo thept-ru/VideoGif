@@ -331,9 +331,9 @@
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill">0%</div>
             </div>
-            <div class="progress-status" id="progressStatus">Обработка...</div>
+            <div class="progress-status" id="progressStatus">Подготовка...</div>
             <div class="progress-details">
-                <span id="progressPhase">Инициализация</span>
+                <span id="progressPhase">Подготовка</span>
                 <span class="download-info" id="downloadPercent">-</span>
             </div>
         </div>
@@ -377,6 +377,9 @@
                     const progressStatus = document.getElementById('progressStatus');
                     const progressPhase = document.getElementById('progressPhase');
                     const downloadPercent = document.getElementById('downloadPercent');
+                    const status = document.getElementById('status');
+                    const submitBtn = document.getElementById('submitBtn');
+                    const progressContainer = document.getElementById('progressContainer');
                     
                     progressFill.style.width = data.progress + '%';
                     progressFill.textContent = Math.round(data.progress) + '%';
@@ -395,8 +398,24 @@
                         downloadPercent.textContent = currentLang === 'ru' ? 'Почти готово!' : 'Almost done!';
                     }
                     
+                    // Check if task is complete
                     if (data.progress >= 100) {
                         clearInterval(progressInterval);
+                        progressContainer.style.display = 'none';
+                        status.style.display = 'block';
+                        status.className = 'status success';
+                        status.innerHTML = `${currentLang === 'ru' ? 'GIF успешно создан!' : 'GIF created successfully!'}<br><a href="/download/${taskId}" download><button class="download-btn">${currentLang === 'ru' ? 'Скачать GIF' : 'Download GIF'}</button></a>`;
+                        submitBtn.disabled = false;
+                    }
+                    
+                    // Check if task failed
+                    if (data.error) {
+                        clearInterval(progressInterval);
+                        progressContainer.style.display = 'none';
+                        status.style.display = 'block';
+                        status.className = 'status error';
+                        status.textContent = currentLang === 'ru' ? `Ошибка: ${data.status}` : `Error: ${data.status}`;
+                        submitBtn.disabled = false;
                     }
                 })
                 .catch(err => console.error('Ошибка:', err));
@@ -439,16 +458,8 @@
                 
                 if (data.success) {
                     currentGifId = data.gif_id;
+                    // Start polling progress immediately
                     progressInterval = setInterval(() => updateProgress(currentGifId), 150);
-                    
-                    setTimeout(() => {
-                        clearInterval(progressInterval);
-                        progressContainer.style.display = 'none';
-                        status.style.display = 'block';
-                        status.className = 'status success';
-                        status.innerHTML = `${data.message}<br><a href="/download/${data.gif_id}" download><button class="download-btn">${currentLang === 'ru' ? 'Скачать GIF' : 'Download GIF'}</button></a>`;
-                        submitBtn.disabled = false;
-                    }, 2000);
                 } else {
                     progressContainer.style.display = 'none';
                     status.style.display = 'block';
