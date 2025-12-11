@@ -6,7 +6,7 @@
     <title>Video to GIF Converter</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,7 +15,7 @@
         }
         
         body {
-            font-family: 'Space Grotesk', 'Arial Black', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #FDE047;
             min-height: 100vh;
             display: flex;
@@ -60,19 +60,21 @@
         h1 {
             color: black;
             margin-bottom: 10px;
-            font-size: 36px;
+            font-size: 32px;
             text-align: center;
-            font-weight: 900;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: -1px;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
         }
         
         .subtitle {
             color: black;
             text-align: center;
             margin-bottom: 30px;
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.4;
         }
         
         .form-group {
@@ -83,9 +85,10 @@
             display: block;
             margin-bottom: 8px;
             color: black;
-            font-weight: 900;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 13px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         input[type="text"],
@@ -94,8 +97,9 @@
             padding: 12px 16px;
             border: 3px solid black;
             background: white;
-            font-size: 15px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
             transition: all 0.2s;
         }
         
@@ -111,7 +115,8 @@
             font-size: 12px;
             color: black;
             margin-top: 5px;
-            font-weight: 600;
+            font-weight: 500;
+            line-height: 1.4;
         }
         
         .duration-control {
@@ -152,9 +157,10 @@
         
         .duration-value {
             min-width: 60px;
-            font-weight: 900;
+            font-weight: 800;
             color: black;
             font-size: 18px;
+            font-family: 'Inter', sans-serif;
         }
         
         .checkbox-group {
@@ -179,14 +185,16 @@
             cursor: pointer;
             color: black;
             font-size: 14px;
-            font-weight: 700;
+            font-weight: 600;
+            line-height: 1.3;
         }
         
         .checkbox-description {
             font-size: 11px;
             color: black;
             margin-top: 2px;
-            font-weight: 600;
+            font-weight: 500;
+            line-height: 1.3;
         }
         
         .conditional-group {
@@ -207,10 +215,12 @@
             background: #10B981;
             color: black;
             border: 4px solid black;
-            font-size: 18px;
-            font-weight: 900;
+            font-size: 16px;
+            font-weight: 800;
+            font-family: 'Inter', sans-serif;
             cursor: pointer;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
             transition: all 0.2s;
             box-shadow: 4px 4px 0 black;
         }
@@ -255,30 +265,34 @@
             align-items: center;
             justify-content: center;
             color: black;
-            font-weight: 900;
-            font-size: 16px;
+            font-weight: 800;
+            font-size: 14px;
             position: relative;
             border-right: 4px solid black;
+            font-family: 'Inter', sans-serif;
         }
         
         .progress-status {
             text-align: center;
             margin-top: 12px;
             color: black;
-            font-size: 16px;
-            font-weight: 900;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.4;
         }
         
         .progress-details {
             display: flex;
             justify-content: space-between;
             margin-top: 8px;
-            font-size: 13px;
+            font-size: 12px;
             color: black;
+            font-weight: 600;
+            line-height: 1.3;
         }
         
         .download-info {
-            font-weight: 900;
+            font-weight: 700;
             color: black;
         }
         
@@ -287,8 +301,10 @@
             padding: 15px;
             border: 4px solid black;
             text-align: center;
-            font-weight: 900;
+            font-weight: 700;
             display: none;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.4;
         }
         
         .status.success {
@@ -334,6 +350,8 @@
             text-transform: uppercase;
             transition: all 0.2s;
             opacity: 0.5;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.5px;
         }
         
         .lang-btn:hover {
