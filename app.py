@@ -30,6 +30,10 @@ def is_direct_video_url(url):
     video_extensions = ['.mp4', '.webm', '.mkv', '.avi', '.mov', '.flv', '.m3u8']
     return any(url.lower().endswith(ext) or ext in url.lower() for ext in video_extensions)
 
+def is_vk_video(url):
+    """Проверка, является ли URL ссылкой на VK Video"""
+    return 'vkvideo.ru' in url.lower() or 'vk.com/video' in url.lower()
+
 def progress_hook(d, task_id):
     """Хук для отслеживания прогресса скачивания"""
     if d['status'] == 'downloading':
@@ -72,6 +76,8 @@ def convert_video():
         video_url = data.get('video_url')
         start_time = int(data.get('start_time', 10))
         duration = int(data.get('duration', 3))
+        vk_username = data.get('vk_username')
+        vk_password = data.get('vk_password')
         
         if duration < 1:
             duration = 1
@@ -79,7 +85,7 @@ def convert_video():
             duration = 10
         
         if not video_url:
-            return jsonify({'error': 'URL видео не указан'}), 400
+            return jsonify({'error': 'Указаны не все параметры'}), 400
         
         unique_id = str(uuid.uuid4())
         
@@ -89,7 +95,7 @@ def convert_video():
         # Start processing in background thread
         thread = threading.Thread(
             target=process_video_task,
-            args=(unique_id, video_url, start_time, duration)
+            args=(unique_id, video_url, start_time, duration, vk_username, vk_password)
         )
         thread.daemon = True
         thread.start()
@@ -105,7 +111,7 @@ def convert_video():
         print(f"Ошибка: {str(e)}")
         return jsonify({'error': f'Ошибка: {str(e)}'}), 500
 
-def process_video_task(unique_id, video_url, start_time, duration):
+def process_video_task(unique_id, video_url, start_time, duration, vk_username=None, vk_password=None):
     """Background task for video processing"""
     try:
         video_path = TEMP_DIR / f"{unique_id}.mp4"
@@ -145,25 +151,65 @@ def process_video_task(unique_id, video_url, start_time, duration):
             download_start = buffer_before
             download_end = buffer_before + buffer_after
             
+            print(f"Диапазон загрузки: {download_start}s - {download_end}s (всего {download_end - download_start}s вместо полного видео)")
+            
             # Use download_ranges to download only needed segment
             from yt_dlp.utils import download_range_func
             
-            ydl_opts = {
-                'format': 'best[ext=mp4]/best',
-                'outtmpl': str(video_path_template),
-                'quiet': False,
-                'no_warnings': False,
-                'geo_bypass': True,
-                'nocheckcertificate': True,
-                'progress_hooks': [lambda d: progress_hook(d, unique_id)],
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-                },
-                'download_ranges': download_range_func(None, [(download_start, download_end)]),
-                'force_keyframes_at_cuts': True,
-            }
+            # Special handling for VK videos
+            if is_vk_video(video_url):
+                print(f"Обнаружено VK видео, используем специальные настройки")
+                ydl_opts = {
+                    'format': 'best',
+                    'outtmpl': str(video_path_template),
+                    'quiet': False,
+                    'no_warnings': False,
+                    'progress_hooks': [lambda d: progress_hook(d, unique_id)],
+                    'nocheckcertificate': True,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+                        'Referer': 'https://vk.com/',
+                        'Origin': 'https://vk.com',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                    },
+                    'download_ranges': download_range_func(None, [(download_start, download_end)]),
+                    'force_keyframes_at_cuts': True,
+                    'extractor_args': {
+                        'vk': {
+                            'is_authorized': True,
+                        }
+                    },
+                }
+                
+                # Add VK credentials if provided
+                if vk_username and vk_password:
+                    print(f"Используем предоставленные данные VK для авторизации")
+                    ydl_opts['username'] = vk_username
+                    ydl_opts['password'] = vk_password
+            else:
+                ydl_opts = {
+                    'format': 'best[ext=mp4]/best',
+                    'outtmpl': str(video_path_template),
+                    'quiet': False,
+                    'no_warnings': False,
+                    'geo_bypass': True,
+                    'nocheckcertificate': True,
+                    'progress_hooks': [lambda d: progress_hook(d, unique_id)],
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Referer': 'https://vk.com/',
+                    },
+                    'download_ranges': download_range_func(None, [(download_start, download_end)]),
+                    'force_keyframes_at_cuts': True,
+                    'extractor_args': {'vk': {'allow_unplayable_formats': True}},
+                }
             
             progress_store[unique_id] = {'progress': 2, 'status': 'Подключение к серверу...', 'download_percent': 0}
             print(f"Скачивание видео: {video_url}")
@@ -175,6 +221,29 @@ def process_video_task(unique_id, video_url, start_time, duration):
             except Exception as dl_error:
                 error_msg = str(dl_error)
                 print(f"Ошибка: {error_msg}")
+                
+                # Check if it's a VK authentication error
+                if is_vk_video(video_url) and ('badbrowser' in error_msg.lower() or 'unsupported url' in error_msg.lower() or 'redirect' in error_msg.lower()):
+                    if not vk_username or not vk_password:
+                        # VK auth is needed
+                        progress_store[unique_id] = {
+                            'progress': 0,
+                            'status': 'Требуется авторизация VK',
+                            'download_percent': 0,
+                            'error': True,
+                            'needs_vk_auth': True
+                        }
+                        return
+                    else:
+                        # VK auth failed even with credentials
+                        progress_store[unique_id] = {
+                            'progress': 0,
+                            'status': f'Ошибка авторизации VK: неверный логин или пароль',
+                            'download_percent': 0,
+                            'error': True
+                        }
+                        return
+                
                 del progress_store[unique_id]
                 return
             
@@ -196,19 +265,53 @@ def process_video_task(unique_id, video_url, start_time, duration):
         buffer_before = max(0, start_time - 2)
         gif_seek_time = start_time - buffer_before  # Offset from segment start (typically 2 seconds)
         
-        # GIF creation from downloaded segment
+        # High-quality GIF creation using two-pass palette generation
+        palette_path = TEMP_DIR / f"{unique_id}_palette.png"
+        
+        update_progress(unique_id, 75, 'Генерация цветовой палитры...', 100)
+        
+        # Step 1: Generate optimized color palette
+        palette_cmd = [
+            'ffmpeg',
+            '-ss', str(gif_seek_time),
+            '-t', str(duration),
+            '-i', str(video_path),
+            '-vf', 'fps=20,scale=640:-1:flags=lanczos,palettegen=stats_mode=diff:max_colors=256',
+            str(palette_path),
+            '-y'
+        ]
+        
+        try:
+            palette_result = subprocess.run(
+                palette_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if palette_result.returncode != 0:
+                print(f"Ошибка генерации палитры: {palette_result.stderr}")
+                del progress_store[unique_id]
+                return
+        except Exception as e:
+            print(f"Ошибка при генерации палитры: {e}")
+            del progress_store[unique_id]
+            return
+        
+        update_progress(unique_id, 80, 'Конвертация в GIF...', 100)
+        
+        # Step 2: Create high-quality GIF using the palette
         ffmpeg_cmd = [
             'ffmpeg',
             '-ss', str(gif_seek_time),
             '-t', str(duration),
             '-i', str(video_path),
-            '-vf', 'fps=15,scale=480:-1:flags=lanczos',
+            '-i', str(palette_path),
+            '-lavfi', 'fps=20,scale=640:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle',
             '-loop', '0',
             str(gif_path),
             '-y'
         ]
-        
-        update_progress(unique_id, 80, 'Конвертация в GIF...', 100)
         
         # Run FFmpeg with progress monitoring
         try:
@@ -229,21 +332,26 @@ def process_video_task(unique_id, video_url, start_time, duration):
                 frame_match = frame_pattern.search(line)
                 if frame_match:
                     frame_num = int(frame_match.group(1))
-                    # FFmpeg outputs at 15 fps, estimate progress
-                    estimated_progress = min(90, 80 + (frame_num / (duration * 15)) * 10)
+                    # FFmpeg outputs at 20 fps now, estimate progress
+                    estimated_progress = min(90, 80 + (frame_num / (duration * 20)) * 10)
                     update_progress(unique_id, estimated_progress, 'Конвертация в GIF...', 100)
             
             process.wait()
             result_returncode = process.returncode
         except Exception as e:
             print(f"Ошибка при запуске FFmpeg: {e}")
+            palette_path.unlink(missing_ok=True)
             del progress_store[unique_id]
             return
         
         if result_returncode != 0:
             print(f"Ошибка FFmpeg")
+            palette_path.unlink(missing_ok=True)
             del progress_store[unique_id]
             return
+        
+        # Clean up palette file
+        palette_path.unlink(missing_ok=True)
         
         update_progress(unique_id, 95, 'Финализация...', 100)
         video_path.unlink(missing_ok=True)

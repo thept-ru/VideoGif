@@ -357,6 +357,105 @@
         .lang-btn:hover {
             opacity: 1;
         }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border: 5px solid black;
+            box-shadow: 12px 12px 0 black;
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            position: relative;
+        }
+        
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: black;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .modal-description {
+            font-size: 14px;
+            color: black;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #EF4444;
+            border: 3px solid black;
+            width: 35px;
+            height: 35px;
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 0;
+            box-shadow: 3px 3px 0 black;
+        }
+        
+        .close-modal:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0 black;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+        }
+        
+        .btn-secondary {
+            background: #D1D5DB !important;
+        }
+        
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 3px solid black;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+        
+        input[type="password"]:focus {
+            outline: none;
+            background: #FDE047;
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 black;
+        }
     </style>
 </head>
 <body>
@@ -407,10 +506,37 @@
         <div class="status" id="status"></div>
     </div>
     
+    <!-- VK Auth Modal -->
+    <div class="modal" id="vkAuthModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeVkModal()">×</button>
+            <div class="modal-header">
+                <h2 class="modal-title" data-ru="Авторизация VK" data-en="VK Authorization">Авторизация VK</h2>
+                <p class="modal-description" data-ru="Для скачивания этого видео необходима авторизация в ВКонтакте" data-en="Authorization required to download this VK video">Для скачивания этого видео необходима авторизация в ВКонтакте</p>
+            </div>
+            <form id="vkAuthForm">
+                <div class="form-group">
+                    <label data-ru="Логин (email или телефон):" data-en="Login (email or phone):">Логин (email или телефон):</label>
+                    <input type="text" id="vkUsername" placeholder="example@mail.ru" required>
+                </div>
+                <div class="form-group">
+                    <label data-ru="Пароль:" data-en="Password:">Пароль:</label>
+                    <input type="password" id="vkPassword" required>
+                    <div class="hint" data-ru="Ваши данные используются только для скачивания видео и не сохраняются" data-en="Your credentials are used only for video download and are not saved">Ваши данные используются только для скачивания видео и не сохраняются</div>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-secondary" onclick="closeVkModal()" data-ru="Отмена" data-en="Cancel">Отмена</button>
+                    <button type="submit" id="vkAuthBtn" data-ru="Войти и скачать" data-en="Login and Download">Войти и скачать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <script>
         let currentLang = 'ru';
         let currentGifId = null;
         let progressInterval = null;
+        let pendingConversion = null; // Store conversion data when VK auth is needed
         
         const durationRange = document.getElementById('durationRange');
         const durationValue = document.getElementById('durationValue');
@@ -418,6 +544,24 @@
         durationRange.addEventListener('input', (e) => {
             durationValue.textContent = e.target.value;
         });
+        
+        function closeVkModal() {
+            document.getElementById('vkAuthModal').classList.remove('active');
+            document.getElementById('vkUsername').value = '';
+            document.getElementById('vkPassword').value = '';
+            document.getElementById('submitBtn').disabled = false;
+            pendingConversion = null;
+            
+            // Clear progress interval if it's running
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+        
+        function showVkModal() {
+            document.getElementById('vkAuthModal').classList.add('active');
+        }
         
         function toggleLanguage() {
             // Toggle between languages
@@ -485,6 +629,7 @@
                     // Check if task is complete
                     if (data.progress >= 100) {
                         clearInterval(progressInterval);
+                        progressInterval = null;
                         progressContainer.style.display = 'none';
                         status.style.display = 'block';
                         status.className = 'status success';
@@ -495,10 +640,21 @@
                     // Check if task failed
                     if (data.error) {
                         clearInterval(progressInterval);
+                        progressInterval = null;
                         progressContainer.style.display = 'none';
                         status.style.display = 'block';
                         status.className = 'status error';
-                        status.textContent = currentLang === 'ru' ? `Ошибка: ${data.status}` : `Error: ${data.status}`;
+                        
+                        // Check if it's a VK auth error
+                        if (data.needs_vk_auth) {
+                            status.textContent = currentLang === 'ru' ? 'Требуется авторизация VK. Открываем форму...' : 'VK authorization required. Opening form...';
+                            setTimeout(() => {
+                                status.style.display = 'none';
+                                showVkModal();
+                            }, 1000);
+                        } else {
+                            status.textContent = currentLang === 'ru' ? `Ошибка: ${data.status}` : `Error: ${data.status}`;
+                        }
                         submitBtn.disabled = false;
                     }
                 })
@@ -515,6 +671,12 @@
             const status = document.getElementById('status');
             const progressContainer = document.getElementById('progressContainer');
             const progressFill = document.getElementById('progressFill');
+            
+            // Clear any existing progress interval
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
             
             submitBtn.disabled = true;
             progressContainer.style.display = 'block';
@@ -548,16 +710,92 @@
                     progressContainer.style.display = 'none';
                     status.style.display = 'block';
                     status.className = 'status error';
-                    status.textContent = currentLang === 'ru' ? `Ошибка: ${data.error}` : `Error: ${data.error}`;
-                    submitBtn.disabled = false;
+                    
+                    // Check if VK auth is needed
+                    if (data.needs_vk_auth) {
+                        // Store the conversion data for retry after auth
+                        pendingConversion = { videoUrl, startTime, duration };
+                        status.textContent = currentLang === 'ru' ? 'Требуется авторизация VK...' : 'VK authorization required...';
+                        setTimeout(() => {
+                            status.style.display = 'none';
+                            showVkModal();
+                        }, 1000);
+                    } else {
+                        status.textContent = currentLang === 'ru' ? `Ошибка: ${data.error}` : `Error: ${data.error}`;
+                        submitBtn.disabled = false;
+                    }
                 }
             } catch (error) {
                 clearInterval(progressInterval);
+                progressInterval = null;
                 progressContainer.style.display = 'none';
                 status.style.display = 'block';
                 status.className = 'status error';
                 status.textContent = currentLang === 'ru' ? `Ошибка: ${error.message}` : `Error: ${error.message}`;
                 submitBtn.disabled = false;
+            }
+        });
+        
+        // VK Auth Form Handler
+        document.getElementById('vkAuthForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!pendingConversion) {
+                closeVkModal();
+                return;
+            }
+            
+            const vkUsername = document.getElementById('vkUsername').value;
+            const vkPassword = document.getElementById('vkPassword').value;
+            const vkAuthBtn = document.getElementById('vkAuthBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const status = document.getElementById('status');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            
+            vkAuthBtn.disabled = true;
+            vkAuthBtn.textContent = currentLang === 'ru' ? 'Вход...' : 'Logging in...';
+            
+            try {
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        video_url: pendingConversion.videoUrl,
+                        start_time: pendingConversion.startTime,
+                        duration: pendingConversion.duration,
+                        vk_username: vkUsername,
+                        vk_password: vkPassword
+                    })
+                });
+                
+                const data = await response.json();
+                
+                closeVkModal();
+                
+                if (data.success) {
+                    currentGifId = data.gif_id;
+                    progressContainer.style.display = 'block';
+                    status.style.display = 'none';
+                    progressFill.style.width = '0%';
+                    progressFill.textContent = '0%';
+                    // Start polling progress
+                    progressInterval = setInterval(() => updateProgress(currentGifId), 150);
+                } else {
+                    status.style.display = 'block';
+                    status.className = 'status error';
+                    status.textContent = currentLang === 'ru' ? `Ошибка: ${data.error}` : `Error: ${data.error}`;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                closeVkModal();
+                status.style.display = 'block';
+                status.className = 'status error';
+                status.textContent = currentLang === 'ru' ? `Ошибка: ${error.message}` : `Error: ${error.message}`;
+                submitBtn.disabled = false;
+            } finally {
+                vkAuthBtn.disabled = false;
+                vkAuthBtn.textContent = currentLang === 'ru' ? 'Войти и скачать' : 'Login and Download';
             }
         });
     </script>
