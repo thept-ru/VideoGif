@@ -13,8 +13,24 @@ app = Flask(__name__)
 TEMP_DIR = Path("temp")
 TEMP_DIR.mkdir(exist_ok=True)
 
+# Время жизни временных файлов в секундах (60 минут)
+TEMP_FILE_TTL = 60 * 60
+
 progress_store = {}
 lock = threading.Lock()
+
+def cleanup_old_files():
+    """Удаление устаревших временных файлов"""
+    current_time = time.time()
+    for file_path in TEMP_DIR.glob("*"):
+        if file_path.is_file():
+            file_age = current_time - file_path.stat().st_mtime
+            if file_age > TEMP_FILE_TTL:
+                try:
+                    file_path.unlink()
+                    print(f"Удален устаревший файл: {file_path}")
+                except Exception as e:
+                    print(f"Ошибка при удалении файла {file_path}: {e}")
 
 def update_progress(task_id, progress, status, download_percent=None):
     """Thread-safe progress update"""
@@ -353,10 +369,37 @@ def process_video_task(unique_id, video_url, start_time, duration, vk_username=N
         # Clean up palette file
         palette_path.unlink(missing_ok=True)
         
-        update_progress(unique_id, 95, 'Финализация...', 100)
+        # Генерация изображения из первого кадра
+        image_path = TEMP_DIR / f"{unique_id}.jpg"
+        image_cmd = [
+            'ffmpeg',
+            '-ss', str(gif_seek_time),  # Используем тот же момент времени, что и для GIF
+            '-i', str(video_path),      # Используем оригинальный путь
+            '-vframes', '1',
+            '-q:v', '2',  # Высокое качество
+            str(image_path),
+            '-y'
+        ]
+        
+        try:
+            image_result = subprocess.run(
+                image_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            if image_result.returncode != 0:
+                print(f"Ошибка генерации изображения: {image_result.stderr}")
+            else:
+                update_progress(unique_id, 98, 'Создание превью изображения...', 100)
+        except Exception as e:
+            print(f"Ошибка при генерации изображения: {e}")
+        
+        update_progress(unique_id, 99, 'Финализация...', 100)
         video_path.unlink(missing_ok=True)
         
-        update_progress(unique_id, 100, 'Готово! GIF создан', 100)
+        update_progress(unique_id, 100, 'Готово! GIF и изображение созданы', 100)
         
     except Exception as e:
         print(f"Ошибка в фоновой задаче: {str(e)}")
@@ -391,5 +434,34 @@ def cleanup(gif_id):
         del progress_store[gif_id]
     return jsonify({'success': True})
 
+@app.route('/download_image/<gif_id>')
+def download_image(gif_id):
+    """Скачивание изображения из первого кадра"""
+    # Проверяем наличие jpg файла
+    image_path = TEMP_DIR / f"{gif_id}.jpg"
+    if not image_path.exists():
+        # Если jpg нет, проверяем png
+        image_path = TEMP_DIR / f"{gif_id}.png"
+        if not image_path.exists():
+            return "Изображение не найдено", 404
+    
+    if gif_id in progress_store:
+        del progress_store[gif_id]
+    
+    return send_file(image_path, as_attachment=True, download_name='video_frame.jpg')
+
+def schedule_cleanup():
+    """Функция для периодической очистки устаревших файлов"""
+    while True:
+        try:
+            cleanup_old_files()
+            time.sleep(TEMP_FILE_TTL)  # Ожидаем TTL перед следующей очисткой
+        except Exception as e:
+            print(f"Ошибка при очистке файлов: {e}")
+
+# Запуск потока очистки
+cleanup_thread = threading.Thread(target=schedule_cleanup, daemon=True)
+cleanup_thread.start()
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5500)
+    app.run(debug=True, host='0.0.0', port=5500)

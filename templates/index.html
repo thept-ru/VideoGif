@@ -331,6 +331,17 @@
             background: #2563EB;
         }
         
+        .download-image-btn {
+            margin-top: 10px;
+            background: #8B5CF6;
+            border: 4px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+        
+        .download-image-btn:hover {
+            background: #7C3AED;
+        }
+        
         .lang-switch {
             position: absolute;
             top: 15px;
@@ -470,8 +481,8 @@
         <form id="convertForm">
             <div class="form-group">
                 <label data-ru="Ссылка на видео:" data-en="Video URL:">Ссылка на видео:</label>
-                <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." required>
-                <div class="hint" data-ru="Поддерживается YouTube и прямые ссылки на видео" data-en="Supports YouTube and direct video links">Поддерживается YouTube и прямые ссылки на видео</div>
+                <input type="text" id="videoUrl" placeholder="https://vkvideo.ru/video-..." required>
+                <div class="hint" data-ru="Поддерживается VK Video и прямые ссылки на видео" data-en="Supports VK Video and direct video links">Поддерживается VK Video и прямые ссылки на видео</div>
             </div>
             
             <div class="form-group">
@@ -633,7 +644,7 @@
                         progressContainer.style.display = 'none';
                         status.style.display = 'block';
                         status.className = 'status success';
-                        status.innerHTML = `${currentLang === 'ru' ? 'GIF успешно создан!' : 'GIF created successfully!'}<br><a href="/download/${taskId}" download><button class="download-btn">${currentLang === 'ru' ? 'Скачать GIF' : 'Download GIF'}</button></a>`;
+                        status.innerHTML = `${currentLang === 'ru' ? 'GIF и изображение успешно созданы!' : 'GIF and image created successfully!'}<br><a href="/download/${taskId}" download><button class="download-btn">${currentLang === 'ru' ? 'Скачать GIF' : 'Download GIF'}</button></a><br><a href="/download_image/${taskId}" download><button class="download-image-btn">${currentLang === 'ru' ? 'Скачать изображение' : 'Download Image'}</button></a>`;
                         submitBtn.disabled = false;
                     }
                     
