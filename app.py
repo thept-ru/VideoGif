@@ -342,14 +342,15 @@ def process_video_task(unique_id, video_url, start_time, duration, vk_username=N
             # Monitor FFmpeg output for progress
             import re as regex_module
             frame_pattern = regex_module.compile(r'frame=\s*(\d+)')
-            duration_ms = duration * 1000  # Expected duration in milliseconds
+            # Ожидаемое количество кадров: duration * 20 FPS
+            expected_frames = duration * 20
             
             for line in process.stderr:
                 frame_match = frame_pattern.search(line)
                 if frame_match:
                     frame_num = int(frame_match.group(1))
-                    # FFmpeg outputs at 20 fps now, estimate progress
-                    estimated_progress = min(90, 80 + (frame_num / (duration * 20)) * 10)
+                    # Рассчитываем прогресс от 80% до 90% (10% от общего прогресса на создание GIF)
+                    estimated_progress = 80 + min(10, (frame_num / expected_frames) * 10)
                     update_progress(unique_id, estimated_progress, 'Конвертация в GIF...', 100)
             
             process.wait()
@@ -368,6 +369,8 @@ def process_video_task(unique_id, video_url, start_time, duration, vk_username=N
         
         # Clean up palette file
         palette_path.unlink(missing_ok=True)
+        
+        update_progress(unique_id, 90, 'Финализация...', 100)
         
         # Генерация изображения из первого кадра
         image_path = TEMP_DIR / f"{unique_id}.jpg"
@@ -392,11 +395,10 @@ def process_video_task(unique_id, video_url, start_time, duration, vk_username=N
             if image_result.returncode != 0:
                 print(f"Ошибка генерации изображения: {image_result.stderr}")
             else:
-                update_progress(unique_id, 98, 'Создание превью изображения...', 100)
+                update_progress(unique_id, 95, 'Создание превью изображения...', 100)
         except Exception as e:
             print(f"Ошибка при генерации изображения: {e}")
         
-        update_progress(unique_id, 99, 'Финализация...', 100)
         video_path.unlink(missing_ok=True)
         
         update_progress(unique_id, 100, 'Готово! GIF и изображение созданы', 100)
